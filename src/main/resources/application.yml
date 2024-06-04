@@ -4,7 +4,7 @@ spring:
     name: user-center
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/user-center?useUnicode=true&characterEncoding=UTF-8
+    url: jdbc:mysql://127.0.0.1:3307/user-center?useUnicode=true&characterEncoding=UTF-8
     username: root
     password: root
 mybatis-plus:

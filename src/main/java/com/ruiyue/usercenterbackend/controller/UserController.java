@@ -6,10 +6,7 @@ import com.ruiyue.usercenterbackend.model.request.UserLoginRequest;
 import com.ruiyue.usercenterbackend.model.request.UserRegisterRequest;
 import com.ruiyue.usercenterbackend.service.UserService;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -21,19 +18,19 @@ import static com.ruiyue.usercenterbackend.constant.UserConstant.ADMIN_ROLE;
 import static com.ruiyue.usercenterbackend.constant.UserConstant.USER_LOGIN_STATE;
 
 @RestController
+@RequestMapping("/user")
 public class UserController {
 
 
     @Resource
     private UserService userService;
 
-    @GetMapping("/test")
-    public String test(){
-        System.out.println("test");
-        return null;
-    }
-
-    @PostMapping("/userRegister")
+    /**
+     * 用户注册
+     * @param userRegisterRequest
+     * @return
+     */
+    @PostMapping("/register")
     public Long userRegister(@RequestBody UserRegisterRequest userRegisterRequest){
         if (userRegisterRequest == null) {
             return null;
@@ -48,7 +45,13 @@ public class UserController {
         return userService.userRegister(userAccount,userPassword,checkPassword);
     }
 
-    @PostMapping("/userLogin")
+    /**
+     * 用户登录
+     * @param userLoginRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/login")
     public User userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request){
         if (userLoginRequest == null) {
             return null;
@@ -62,21 +65,36 @@ public class UserController {
         return userService.userLogin(userAccount,userPassword,request);
     }
 
-    @GetMapping("/searchUsers")
-    public List<User> searchUsers(String username, HttpServletRequest request) {
-
-        if (StringUtils.isBlank(username)) {
-            return new ArrayList<>();
+    /**
+     * 获取当前用户登录信息
+     * @param request   请求
+     * @return 用户
+     */
+    @GetMapping("/current")
+    public User getCurrentUser(HttpServletRequest request){
+        User user = getSessionUser(request);
+        // 未登录
+        if (user == null) {
+            return null;
         }
+        // 避免session中的user信息不实时，因此再次查库（可以设计为即时更新缓存，减少查库次数）
+        User dbUser = userService.getById(user.getId());
+        User safetyUser = userService.getSafetyUser(dbUser);
+        return safetyUser;
+    }
+
+    @GetMapping("/search")
+    public List<User> searchUsers(String username, HttpServletRequest request) {
 
         if (!isAdmin(request)) {
             return new ArrayList<>();
         }
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        if (StringUtils.isNotBlank(username)) {
+            queryWrapper.like("username", username);
+        }
 
-        QueryWrapper <User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.like("username",username);
-
-        List<User> list = userService.list();
+        List<User> list = userService.list(queryWrapper);
         return list.stream().map(user -> {
             return userService.getSafetyUser(user);
         }).collect(Collectors.toList());
@@ -105,5 +123,15 @@ public class UserController {
             return false;
         }
         return true;
+    }
+
+    /**
+     * 从session中获取用户
+     * @param request 请求
+     * @return 返回user对象，可能返回null
+     */
+    private User getSessionUser(HttpServletRequest request) {
+        User user = (User)request.getSession().getAttribute(USER_LOGIN_STATE);
+        return user;
     }
 }

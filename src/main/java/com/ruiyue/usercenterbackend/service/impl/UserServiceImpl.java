@@ -71,6 +71,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 2. 插入数据
         User user = new User();
         user.setUserAccount(userAccount);
+        user.setUsername(userAccount);
+        user.setAvatarUrl("https://pic.code-nav.cn/user_avatar/1759786464587145217/rDzTnV4L-微信图片_20240418162121.jpg");
         user.setUserPassword(digest);
 
 
