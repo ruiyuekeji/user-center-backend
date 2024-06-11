@@ -1,17 +1,23 @@
 package com.ruiyue.usercenterbackend.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.ruiyue.usercenterbackend.common.BaseResponse;
+import com.ruiyue.usercenterbackend.common.ResultUtils;
+import com.ruiyue.usercenterbackend.exception.BizException;
+import com.ruiyue.usercenterbackend.exception.ErrorCode;
 import com.ruiyue.usercenterbackend.model.domain.User;
 import com.ruiyue.usercenterbackend.model.request.UserLoginRequest;
 import com.ruiyue.usercenterbackend.model.request.UserRegisterRequest;
 import com.ruiyue.usercenterbackend.service.UserService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.function.RouterFunctionDslKt;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.RunnableScheduledFuture;
 import java.util.stream.Collectors;
 
 import static com.ruiyue.usercenterbackend.constant.UserConstant.ADMIN_ROLE;
@@ -31,7 +37,7 @@ public class UserController {
      * @return
      */
     @PostMapping("/register")
-    public Long userRegister(@RequestBody UserRegisterRequest userRegisterRequest){
+    public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest){
         if (userRegisterRequest == null) {
             return null;
         }
@@ -41,8 +47,9 @@ public class UserController {
         if (StringUtils.isAnyBlank(userAccount,userPassword,checkPassword)) {
             return  null;
         }
+        Long register = userService.userRegister(userAccount, userPassword, checkPassword);
 
-        return userService.userRegister(userAccount,userPassword,checkPassword);
+        return ResultUtils.success(register);
     }
 
     /**
@@ -52,17 +59,33 @@ public class UserController {
      * @return
      */
     @PostMapping("/login")
-    public User userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request){
+    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request){
         if (userLoginRequest == null) {
-            return null;
+            throw new BizException(ErrorCode.BAD_REQUEST_PARAM,"请求参数为空");
         }
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
         if (StringUtils.isAnyBlank(userAccount,userPassword)) {
-            return null;
+            throw new BizException(ErrorCode.BAD_REQUEST_PARAM,"用户名或密码为空");
         }
 
-        return userService.userLogin(userAccount,userPassword,request);
+        User user = userService.userLogin(userAccount, userPassword, request);
+        return ResultUtils.success(user);
+    }
+
+
+    /**
+     * 用户注销
+     * @param request   请求
+     * @return 1 表示注销成功
+     */
+    @PostMapping("/logout")
+    public BaseResponse<Integer> userLogout(HttpServletRequest request) {
+        if (request == null) {
+            throw new BizException(ErrorCode.BAD_REQUEST_PARAM,"请求参数为空");
+        }
+        userService.userLogout(request);
+        return ResultUtils.success(1);
     }
 
     /**
@@ -71,23 +94,29 @@ public class UserController {
      * @return 用户
      */
     @GetMapping("/current")
-    public User getCurrentUser(HttpServletRequest request){
+    public BaseResponse<User> getCurrentUser(HttpServletRequest request){
         User user = getSessionUser(request);
         // 未登录
         if (user == null) {
-            return null;
+            throw new BizException(ErrorCode.USER_NOT_LOGIN,"用户未登录系统");
         }
         // 避免session中的user信息不实时，因此再次查库（可以设计为即时更新缓存，减少查库次数）
         User dbUser = userService.getById(user.getId());
         User safetyUser = userService.getSafetyUser(dbUser);
-        return safetyUser;
+        return ResultUtils.success(safetyUser);
     }
 
+    /**
+     * 用户查询，用户列表执行
+     * @param username
+     * @param request
+     * @return
+     */
     @GetMapping("/search")
-    public List<User> searchUsers(String username, HttpServletRequest request) {
+    public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
 
         if (!isAdmin(request)) {
-            return new ArrayList<>();
+            throw new BizException(ErrorCode.NO_AUTHORITY,"非管理员无权访问用户数据");
         }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNotBlank(username)) {
@@ -95,21 +124,23 @@ public class UserController {
         }
 
         List<User> list = userService.list(queryWrapper);
-        return list.stream().map(user -> {
+        List<User> userList = list.stream().map(user -> {
             return userService.getSafetyUser(user);
         }).collect(Collectors.toList());
+        return ResultUtils.success(userList);
     }
 
     @GetMapping("/deleteUser")
-    public boolean deleteUser(@RequestBody long id, HttpServletRequest request) {
+    public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
         if (id <= 0) {
-            return false;
+            throw new BizException(ErrorCode.BAD_REQUEST_PARAM,"请求参数不能小于0");
         }
         if (!isAdmin(request)) {
-            return false;
+            throw new BizException(ErrorCode.NO_AUTHORITY,"非管理员无权删除用户");
         }
 
-        return userService.removeById(id);
+        boolean removeFlag = userService.removeById(id);
+        return ResultUtils.success(removeFlag);
     }
 
     /**
