@@ -10,6 +10,7 @@ import lombok.Setter;
 public enum ErrorCode {
 
     INTERNAL_SERVER_ERROR(50000, "服务器内部错误"),
+    SYSTEM_ERROR(50001, "系统内部错误"),
 
     BAD_REQUEST_PARAM(40001, "请求参数错误"),
     USER_NOT_FOUND(40002, "用户不存在"),

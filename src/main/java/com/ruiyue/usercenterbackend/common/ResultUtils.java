@@ -1,5 +1,7 @@
 package com.ruiyue.usercenterbackend.common;
 
+import com.ruiyue.usercenterbackend.exception.ErrorCode;
+
 /**
  * 结果返回的工具类
  */
@@ -25,5 +27,9 @@ public class ResultUtils {
      */
     public static BaseResponse fail(String msg, int code ,String description){
         return new BaseResponse(code, null, msg, description);
+    }
+
+    public static BaseResponse fail(String msg, ErrorCode errorCode){
+        return new BaseResponse(errorCode.getCode(), null, msg, errorCode.getDescription());
     }
 }

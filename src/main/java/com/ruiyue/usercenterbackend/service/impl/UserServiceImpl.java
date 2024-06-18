@@ -72,7 +72,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User user = new User();
         user.setUserAccount(userAccount);
         user.setUsername(userAccount);
-        user.setAvatarUrl("https://pic.code-nav.cn/user_avatar/1759786464587145217/rDzTnV4L-微信图片_20240418162121.jpg");
+        user.setAvatarUrl("http://5b0988e595225.cdn.sohucs.com/images/20171114/bc48840fb6904dd4bd8f6a8af8178af4.png");
         user.setUserPassword(digest);
 
 
